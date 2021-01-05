@@ -1,142 +1,140 @@
-/* eslint-disable block-scoped-var */
-/* eslint-disable @typescript-eslint/restrict-template-expressions */
-// TODO: Find or create typings for simple-youtube-api or wait for v6 released and then remove no-extra-parens
-import BaseCommand from "../structures/BaseCommand";
-import ServerQueue from "../structures/ServerQueue";
-import ytdl from "../utils/YoutubeDownload";
-import { Util, MessageEmbed } from "discord.js";
+/* eslint-disable block-scoped-var, @typescript-eslint/restrict-template-expressions */
+import { BaseCommand } from "../structures/BaseCommand";
+import { ServerQueue } from "../structures/ServerQueue";
+import { playSong } from "../utils/YoutubeDownload";
+import { Util, MessageEmbed, VoiceChannel } from "discord.js";
 import { decodeHTML } from "entities";
-import type { VoiceChannel } from "discord.js";
-import type Disc_11 from "../structures/Disc_11";
-import type { IMessage, ISong, IGuild } from "../../typings";
+import { IMessage, ISong, IGuild, ITextChannel } from "../../typings";
+import { Video } from "../utils/YoutubeAPI/structures/Video";
+import { DefineCommand } from "../utils/decorators/DefineCommand";
+import { isUserInTheVoiceChannel, isSameVoiceChannel, isValidVoiceChannel } from "../utils/decorators/MusicHelper";
+import { createEmbed } from "../utils/createEmbed";
 
-export default class PlayCommand extends BaseCommand {
-    public constructor(public client: Disc_11, public readonly path: string) {
-        super(client, path, { aliases: ["p", "add", "play-music"] }, {
-            name: "play",
-            description: "Play some music",
-            usage: "{prefix}play <youtube video or playlist link / youtube video name>"
-        });
-    }
-
+@DefineCommand({
+    aliases: ["p", "add", "play-music"],
+    name: "play",
+    description: "Play some music",
+    usage: "{prefix}play <youtube video or youtube video name or playlist link>"
+})
+export class PlayCommand extends BaseCommand {
+    @isUserInTheVoiceChannel()
+    @isValidVoiceChannel()
+    @isSameVoiceChannel()
     public async execute(message: IMessage, args: string[]): Promise<any> {
-        const voiceChannel = message.member?.voice.channel;
-        if (!voiceChannel) return message.channel.send(new MessageEmbed().setDescription("I'm sorry, but you need to be in a voice channel to play music").setColor("YELLOW"));
-        if (!voiceChannel.joinable) {
-            return message.channel.send(
-                new MessageEmbed().setDescription("I'm sorry, but I can't connect to your voice channel, make sure I have the proper permissions!").setColor("RED")
-            );
-        }
-        if (!voiceChannel.speakable) {
-            voiceChannel.leave();
-            return message.channel.send(new MessageEmbed().setDescription("I'm sorry, but I can't speak in this voice channel, make sure I have the proper permissions"!)
-                .setColor("RED"));
-        }
+        const voiceChannel = message.member!.voice.channel!;
         if (!args[0]) {
             return message.channel.send(
-                new MessageEmbed().setDescription(`Invalid arguments, type **\`${this.client.config.prefix}help play\`** for more information`).setColor("YELLOW")
+                createEmbed("warn", `Invalid arguments, type **\`${this.client.config.prefix}help play\`** for more information`)
             );
         }
         const searchString = args.join(" ");
         const url = searchString.replace(/<(.+)>/g, "$1");
 
         if (message.guild?.queue !== null && voiceChannel.id !== message.guild?.queue.voiceChannel?.id) {
-            return message.channel.send(new MessageEmbed()
-                .setDescription(`Music on this server is already playing on: **\`${message.guild?.queue.voiceChannel?.name}\`** voice channel`)
-                .setColor("YELLOW"));
+            return message.channel.send(
+                createEmbed("warn", `Music on this server is already playing on: **\`${message.guild?.queue.voiceChannel?.name}\`** voice channel`)
+            );
         }
 
-        if (/^https?:\/\/(www.youtube.com|youtube.com)\/playlist(.*)$/.exec(url)) {
-            const playlist = await this.client.youtube.getPlaylist(url);
-            const videos = await playlist.getVideos();
-            let skikppedVideos = 0;
-            message.channel.send(new MessageEmbed().setDescription(`Adding all videos in playlist: **[${playlist.title}](${playlist.url})**, please wait...`).setColor(this.client.config.embedColor))
-                .catch(e => this.client.logger.error("PLAY_CMD_ERR:", e));
-            for (const video of Object.values(videos)) {
-                if ((video as any).raw.status.privacyStatus === "private") {
-                    skikppedVideos++;
-                    continue;
-                } else {
-                    const video2 = await this.client.youtube.getVideoByID((video as any).id); // TODO: Find or create typings for simple-youtube-api or wait for v6 released
-                    await this.handleVideo(video2, message, voiceChannel, true);
+        const regex = /^((www|music).)?youtube.com\/playlist(.*)$/;
+        // if (/^https?:\/\/(www.youtube.com|youtube.com)\/playlist(.*)$/.exec(url)) {
+        if (regex.exec(url)) {
+            try {
+                const playlist = await this.client.youtube.getPlaylistByURL(url);
+                const videos = await playlist.getVideos();
+                let skippedVideos = 0;
+                message.channel.send(createEmbed("info", `Adding all videos in playlist: **[${playlist.title}](${playlist.url})**, hang on...`))
+                    .catch(e => this.client.logger.error("PLAY_CMD_ERR:", e));
+                for (const video of Object.values(videos)) {
+                    if (video.status.privacyStatus === "private") {
+                        skippedVideos++;
+                        continue;
+                    } else {
+                        const video2 = await this.client.youtube.getVideo(video.id);
+                        await this.handleVideo(video2, message, voiceChannel, true);
+                    }
                 }
+                if (skippedVideos !== 0) {
+                    message.channel.send(
+                        createEmbed("warn", `${skippedVideos} ${skippedVideos >= 2 ? `videos` : `video`} are skipped because it's a private video`)
+                    ).catch(e => this.client.logger.error("PLAY_CMD_ERR:", e));
+                }
+                if (skippedVideos === playlist.itemCount) return message.channel.send(createEmbed("error", `Failed to load **[${playlist.title}](${playlist.url})** playlist because all of items are private video.`));
+                return message.channel.send(createEmbed("info", `✅  **|**  All videos in **[${playlist.title}](${playlist.url})**, has been added to the queue!`));
+            } catch (e) {
+                this.client.logger.error("YT_PLAYLIST_ERR:", new Error(e.message));
+                return message.channel.send(createEmbed("error", `I can't load the playlist.\nError: \`${e.message}\``));
             }
-            if (skikppedVideos !== 0) {
-                message.channel.send(
-                    new MessageEmbed()
-                        .setDescription(`${skikppedVideos >= 2 ? `${skikppedVideos} videos` : `${skikppedVideos} video`} are skipped because it's a private video`)
-                        .setColor("YELLOW")
-                ).catch(e => this.client.logger.error("PLAY_CMD_ERR:", e));
-            }
-            return message.channel.send(new MessageEmbed().setDescription(`All videos in playlist: **[${playlist.title}](${playlist.url})**, has been added to the queue!`).setColor(this.client.config.embedColor));
         }
         try {
             // eslint-disable-next-line no-var, block-scoped-var
-            var video = await this.client.youtube.getVideo(url);
+            var video = await this.client.youtube.getVideoByURL(url);
         } catch (e) {
             try {
-                const videos = await this.client.youtube.searchVideos(searchString, 10);
-                if (videos.length === 0) return message.channel.send(new MessageEmbed().setDescription("I could not obtain any search results.").setColor("RED"));
-                let index = 0;
-                const msg = await message.channel.send(new MessageEmbed()
-                    .setAuthor("• Song Selection") // TODO: Find or create typings for simple-youtube-api or wait for v6 released
-                    .setDescription(`\`\`\`\n${videos.map((video: any) => `${++index} - ${this.cleanTitle(video.title)}\`\`\``).join("\n")}\n` +
-                        "Please provide a value to select one of the search results ranging from **\`1-10\`**!")
-                    .setThumbnail(message.client.user?.displayAvatarURL() as string)
-                    .setColor(this.client.config.embedColor)
-                    .setFooter("Type cancel or c to cancel the song selection"));
-                try {
+                const videos = await this.client.youtube.searchVideos(searchString, this.client.config.searchMaxResults);
+                if (videos.length === 0) return message.channel.send(createEmbed("error", "I could not obtain any search results."));
+                if (this.client.config.disableSongSelection) { video = await this.client.youtube.getVideo(videos[0].id); } else {
+                    let index = 0;
+                    const msg = await message.channel.send(new MessageEmbed()
+                        .setAuthor("Song Selection")
+                        .setDescription(`\`\`\`\n${videos.map(video => `${++index} - ${this.cleanTitle(video.title)}`).join("\n")}\`\`\`\n` +
+                        `Please provide a value to select one of the search results ranging from **\`1-${this.client.config.searchMaxResults}\`**!`)
+                        .setThumbnail(message.client.user?.displayAvatarURL() as string)
+                        .setColor(this.client.config.embedColor)
+                        .setFooter("• Type cancel or c to cancel the song selection"));
+                    try {
                     // eslint-disable-next-line no-var
-                    var response = await message.channel.awaitMessages((msg2: IMessage) => {
-                        if (message.author.id !== msg2.author.id) return false;
+                        var response = await message.channel.awaitMessages((msg2: IMessage) => {
+                            if (message.author.id !== msg2.author.id) return false;
 
-                        if (msg2.content === "cancel" || msg2.content === "c") return true;
-                        return Number(msg2.content) > 0 && Number(msg2.content) < 11;
-                    }, {
-                        max: 1,
-                        time: 20000,
-                        errors: ["time"]
-                    });
-                    msg.delete().catch(e => this.client.logger.error("PLAY_CMD_ERR:", e));
-                    response.first()?.delete({ timeout: 3000 }).catch(e => this.client.logger.error("PLAY_CMD_ERR:", e));
-                } catch (error) {
-                    msg.delete().catch(e => this.client.logger.error("PLAY_CMD_ERR:", e));
-                    return message.channel.send(new MessageEmbed().setDescription("No or invalid value entered, song selection has canceled.").setColor("RED"));
+                            if (msg2.content === "cancel" || msg2.content === "c") return true;
+                            return Number(msg2.content) > 0 && Number(msg2.content) < 13;
+                        }, {
+                            max: 1,
+                            time: this.client.config.selectTimeout,
+                            errors: ["time"]
+                        });
+                        msg.delete().catch(e => this.client.logger.error("PLAY_CMD_ERR:", e));
+                        response.first()?.delete({ timeout: 3000 }).catch(e => e); // do nothing
+                    } catch (error) {
+                        msg.delete().catch(e => this.client.logger.error("PLAY_CMD_ERR:", e));
+                        return message.channel.send(createEmbed("error", "No or invalid value entered, the song selection has been canceled."));
+                    }
+                    if (response.first()?.content === "c" || response.first()?.content === "cancel") {
+                        return message.channel.send(createEmbed("warn", "The song selection has been canceled."));
+                    }
+                    const videoIndex = parseInt(response.first()?.content as string, 10);
+                    video = await this.client.youtube.getVideo(videos[videoIndex - 1].id);
                 }
-                if (response.first()?.content === "c" || response.first()?.content === "cancel") {
-                    return message.channel.send(new MessageEmbed().setDescription("Song selection has canceled.").setColor("RED"));
-                }
-                const videoIndex = parseInt(response.first()?.content as string, 10);
-                // eslint-disable-next-line no-var
-                video = await this.client.youtube.getVideoByID(videos[videoIndex - 1].id);
             } catch (err) {
-                this.client.logger.error("YT_SEARCH_ERR: ", err);
-                return message.channel.send(new MessageEmbed().setDescription("I could not obtain any search results.").setColor("RED"));
+                this.client.logger.error("YT_SEARCH_ERR:", new Error(err.message));
+                return message.channel.send(createEmbed("error", `I can't obtain any search results.\nError: \`${err.message}\``));
             }
         }
         return this.handleVideo(video, message, voiceChannel);
     }
 
-    private async handleVideo(video: any, message: IMessage, voiceChannel: VoiceChannel, playlist = false): Promise<any> { // TODO: Find or create typings for simple-youtube-api or wait for v6 released
+    private async handleVideo(video: Video, message: IMessage, voiceChannel: VoiceChannel, playlist = false): Promise<any> {
         const song: ISong = {
             id: video.id,
             title: this.cleanTitle(video.title),
-            url: `https://youtube.com/watch?v=${video.id}`
+            url: video.url,
+            thumbnail: video.thumbnailURL
         };
         if (message.guild?.queue) {
             if (!this.client.config.allowDuplicate && message.guild.queue.songs.find(s => s.id === song.id)) {
-                return message.channel.send(new MessageEmbed()
-                    .setTitle("⌛ Already queued")
-                    .setColor("YELLOW")
-                    .setDescription(`**[${song.title}](${song.id})** is already queued, and this bot configuration disallow duplicated song in queue, ` +
-                `please use **\`${this.client.config.prefix}repeat\`** instead`));
+                return message.channel.send(
+                    createEmbed("warn", `Song: **[${song.title}](${song.id})** is already queued, and this bot configuration disallow duplicated song in queue, ` +
+                `please use \`${this.client.config.prefix}repeat\` instead`)
+                        .setTitle("⌛ Already queued")
+                );
             }
             message.guild.queue.songs.addSong(song);
             if (playlist) return;
-            message.channel.send(new MessageEmbed().setDescription(`✅  **|**  **[${song.title}](${song.url})** has been added to the queue!`).setColor(this.client.config.embedColor))
+            message.channel.send(createEmbed("info", `✅  **|**  **[${song.title}](${song.url})** has been added to the queue!`).setThumbnail(song.thumbnail))
                 .catch(e => this.client.logger.error("PLAY_CMD_ERR:", e));
         } else {
-            message.guild!.queue = new ServerQueue(message.channel, voiceChannel);
+            message.guild!.queue = new ServerQueue(message.channel as ITextChannel, voiceChannel);
             message.guild?.queue.songs.addSong(song);
             try {
                 const connection = await message.guild?.queue.voiceChannel?.join();
@@ -145,12 +143,12 @@ export default class PlayCommand extends BaseCommand {
                 message.guild?.queue.songs.clear();
                 message.guild!.queue = null;
                 this.client.logger.error("PLAY_CMD_ERR:", error);
-                message.channel.send(new MessageEmbed().setDescription(`Error: Could not join the voice channel, because:\n\`${error}\``).setColor("RED"))
+                message.channel.send(createEmbed("error", `Error: Could not join the voice channel, because:\n\`${error.message}\``))
                     .catch(e => this.client.logger.error("PLAY_CMD_ERR:", e));
                 return undefined;
             }
             this.play(message.guild!).catch(err => {
-                message.channel.send(new MessageEmbed().setDescription(`Error while trying to play music:\n\`${err}\``).setColor("RED"))
+                message.channel.send(createEmbed("error", `Error while trying to play music:\n\`${err.message}\``))
                     .catch(e => this.client.logger.error("PLAY_CMD_ERR:", e));
                 return this.client.logger.error("PLAY_CMD_ERR:", err);
             });
@@ -163,38 +161,45 @@ export default class PlayCommand extends BaseCommand {
         const song = serverQueue.songs.first();
         if (!song) {
             serverQueue.textChannel?.send(
-                new MessageEmbed().setDescription(`⏹  **|**  Queue has finished, use **\`${guild.client.config.prefix}play\`** again to play more songs!`).setColor(this.client.config.embedColor)
+                createEmbed("info", `⏹  **|**  Queue has finished, use **\`${guild.client.config.prefix}play\`** again to play more songs!`)
             ).catch(e => this.client.logger.error("PLAY_ERR:", e));
             serverQueue.connection?.disconnect();
             return guild.queue = null;
         }
 
         serverQueue.connection?.voice?.setSelfDeaf(true).catch(e => this.client.logger.error("PLAY_ERR:", e));
-        const songData = await ytdl(song.url, { cache: this.client.config.cacheYoutubeDownloads, cacheMaxLength: this.client.config.cacheMaxLengthAllowed });
+        const songData = await playSong(song.url, { cache: this.client.config.cacheYoutubeDownloads, cacheMaxLength: this.client.config.cacheMaxLengthAllowed, skipFFmpeg: true });
 
         if (songData.cache) this.client.logger.info(`${this.client.shard ? `[Shard #${this.client.shard.ids}]` : ""} Using cache for song "${song.title}" on ${guild.name}`);
 
-        serverQueue.connection?.play(songData.stream, { type: songData.canDemux ? "webm/opus" : "unknown", bitrate: "auto", highWaterMark: 1 })
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+        songData.on("error", err => { err.message = `YTDLError: ${err.message}`; serverQueue.connection?.dispatcher?.emit("error", err); });
+
+        serverQueue.connection?.play(songData, { type: songData.info.canSkipFFmpeg ? "webm/opus" : "unknown", bitrate: "auto", highWaterMark: 1 })
             .on("start", () => {
                 serverQueue.playing = true;
                 this.client.logger.info(`${this.client.shard ? `[Shard #${this.client.shard.ids}]` : ""} Song: "${song.title}" on ${guild.name} has started`);
-                serverQueue.textChannel?.send(new MessageEmbed().setDescription(`▶  **|**  Start playing: **[${song.title}](${song.url})**`).setColor(this.client.config.embedColor))
+                serverQueue.textChannel?.send(createEmbed("info", `▶  **|**  Start playing: **[${song.title}](${song.url})**`).setThumbnail(song.thumbnail))
                     .catch(e => this.client.logger.error("PLAY_ERR:", e));
             })
             .on("finish", () => {
                 this.client.logger.info(`${this.client.shard ? `[Shard #${this.client.shard.ids}]` : ""} Song: "${song.title}" on ${guild.name} has ended`);
                 // eslint-disable-next-line max-statements-per-line
                 if (serverQueue.loopMode === 0) { serverQueue.songs.deleteFirst(); } else if (serverQueue.loopMode === 2) { serverQueue.songs.deleteFirst(); serverQueue.songs.addSong(song); }
-                /* serverQueue.textChannel?.send(new MessageEmbed().setDescription(`⏹  **|**  Stop playing: **[${song.title}](${song.url})**`).setColor(this.client.config.embedColor))
+                /* serverQueue.textChannel?.send(createEmbed("info", `⏹  **|**  Stop playing: **[${song.title}](${song.url})**`).setThumbnail(song.thumbnail))
                     .catch(e => this.client.logger.error("PLAY_ERR:", e)); */
                 this.play(guild).catch(e => {
-                    serverQueue.textChannel?.send(new MessageEmbed().setDescription(`Error while trying to play music:\n\`${e}\``).setColor("RED"))
+                    serverQueue.textChannel?.send(createEmbed("error", `Error while trying to play music:\n\`${e}\``))
                         .catch(e => this.client.logger.error("PLAY_ERR:", e));
                     serverQueue.connection?.dispatcher.end();
                     return this.client.logger.error("PLAY_ERR:", e);
                 });
             })
             .on("error", (err: Error) => {
+                serverQueue.textChannel?.send(createEmbed("error", `Error while playing music:\n\`${err.message}\``))
+                    .catch(e => this.client.logger.error("PLAY_CMD_ERR:", e));
+                guild.queue?.voiceChannel?.leave();
+                guild.queue = null;
                 this.client.logger.error("PLAY_ERR:", err);
             })
             .setVolume(serverQueue.volume / guild.client.config.maxVolume);

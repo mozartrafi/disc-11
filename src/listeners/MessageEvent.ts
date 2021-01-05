@@ -1,21 +1,28 @@
-import { MessageEmbed } from "discord.js";
-import type { Snowflake } from "discord.js";
-import type Disc_11 from "../structures/Disc_11";
-import type { IMessage, ClientEventListener } from "../../typings";
+import { IMessage } from "../../typings";
+import { DefineListener } from "../utils/decorators/DefineListener";
+import { createEmbed } from "../utils/createEmbed";
+import { BaseListener } from "../structures/BaseListener";
+import { User } from "discord.js";
 
-export default class MessageEvent implements ClientEventListener {
-    public readonly name = "message";
-    public constructor(private readonly client: Disc_11) {}
+@DefineListener("message")
+export class MessageEvent extends BaseListener {
+    public async execute(message: IMessage): Promise<any> {
+        if (message.author.bot || message.channel.type !== "text") return message;
 
-    public execute(message: IMessage): any {
-        if (message.author.bot) return message;
-        if (message.channel.type === "dm") return message;
-        if (message.content === this.client.user?.id as Snowflake) {
+        if (message.content.toLowerCase().startsWith(this.client.config.prefix)) return this.client.commands.handle(message);
+
+        if ((await this.getUserFromMention(message.content))?.id === message.client.user?.id) {
             return message.channel.send(
-                new MessageEmbed().setDescription(`Hi, my prefix is **\`${this.client.config.prefix}\`**`).setColor(this.client.config.embedColor)
+                createEmbed("info", `👋  **|**  Hi there, my prefix is **\`${this.client.config.prefix}\`**`)
             );
         }
-        if (!message.content.toLowerCase().startsWith(this.client.config.prefix)) return message;
-        return this.client.CommandsHandler.handle(message);
+    }
+
+    private getUserFromMention(mention: string): Promise<User | undefined> {
+        const matches = /^<@!?(\d+)>$/.exec(mention);
+        if (!matches) return Promise.resolve(undefined);
+
+        const id = matches[1];
+        return this.client.users.fetch(id);
     }
 }

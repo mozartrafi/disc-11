@@ -1,30 +1,26 @@
 /* eslint-disable no-eval */
-import BaseCommand from "../structures/BaseCommand";
+import { BaseCommand } from "../structures/BaseCommand";
 import { MessageEmbed } from "discord.js";
 import { request } from "https";
 import { inspect } from "util";
-import type Disc_11 from "../structures/Disc_11";
-import type { IMessage } from "../../typings";
+import { IMessage } from "../../typings";
+import { DefineCommand } from "../utils/decorators/DefineCommand";
+import { createEmbed } from "../utils/createEmbed";
 
-export default class EvalCommand extends BaseCommand {
-    public constructor(client: Disc_11, public readonly path: string) {
-        super(client, path, {
-            aliases: ["evaluate", "ev", "e", "js-exec"],
-            cooldown: 0
-        }, {
-            name: "eval",
-            description: "Only the bot owner can use this command",
-            usage: "{prefix}eval <some js code>"
-        });
-    }
-
+@DefineCommand({
+    aliases: ["ev", "js-exec", "e", "evaluate"],
+    cooldown: 0,
+    description: "Only the bot owner can use this command",
+    name: "eval",
+    usage: "{prefix}eval <some js code>"
+})
+export class EvalCommand extends BaseCommand {
     public async execute(message: IMessage, args: string[]): Promise<any> {
         const msg = message;
         const client = this.client;
 
         if (!client.config.owners.includes(msg.author.id)) {
-            return message.channel.send(new MessageEmbed()
-                .setDescription("Only the bot owner can use this command").setColor("RED"));
+            return message.channel.send(createEmbed("error", "Only the bot owner can use this command."));
         }
 
         const embed = new MessageEmbed()
@@ -53,8 +49,9 @@ export default class EvalCommand extends BaseCommand {
             if (error.length > 1024) {
                 const hastebin = await this.hastebin(error);
                 embed.addField("**Error**", `${hastebin}.js`);
-            } else { embed.setColor("RED").addField("Error", `\`\`\`js\n${error}\`\`\``); }
-            message.channel.send(embed).catch(e => this.client.logger.error("EVAL_CMD_ERR:", e));
+            } else { embed.setColor("RED").addField("**Error**", `\`\`\`js\n${error}\`\`\``); }
+            message.channel.send(embed).catch(e => this.client.logger.error("EVAL_CMD_MSG_ERR:", e));
+            this.client.logger.error("EVAL_CMD_ERR:", e);
         }
 
         return message;

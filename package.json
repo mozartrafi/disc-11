@@ -1,8 +1,8 @@
 {
   "name": "disc-11",
-  "version": "1.0.0",
+  "version": "1.15.0",
   "private": true,
-  "description": "A dedicated open-source music bot for Zhycorp based on Jukebox.",
+  "description": "A dedicated open-source music bot for Zhycorp based on Jukebox",
   "homepage": "https://github.com/zhycorp/disc-11#readme",
   "repository": {
     "type": "git",
@@ -12,7 +12,7 @@
     "url": "https://github.com/zhycorp/disc-11/issues"
   },
   "license": "AGPL-3.0",
-  "author": "Zhycorp (support@zhycorp.xyz) (https://github.com/zhycorp)",
+  "author": "Zhycorp <support@zhycorp.com> (https://github.com/zhycorp)",
   "main": "start.js",
   "scripts": {
     "build": "npm run lint && npm run compile",
@@ -23,39 +23,43 @@
     "start:dev": "echo [INFO] Sharding disabled when using ts-node && ts-node src/bot"
   },
   "eslintConfig": {
-    "extends": "@hazmi35/eslint-config/typescript",
+    "extends": "@zhycorp/eslint-config/typescript",
     "ignorePatterns": "dist/*"
   },
   "dependencies": {
-    "date-fns": "^2.16.1",
-    "discord.js": "^12.4.1",
+    "@types/node-fetch": "^2.5.7",
+    "discord.js": "^12.5.1",
     "dotenv": "^8.2.0",
     "entities": "^2.1.0",
     "ffmpeg-static": "^4.2.7",
+    "iso8601-duration": "^1.3.0",
+    "node-fetch": "^2.6.1",
+    "node-zhycorp": "^1.5.0",
     "opusscript": "^0.0.7",
-    "simple-youtube-api": "^5.2.1",
+    "pretty-ms": "^7.0.1",
     "tslib": "^2.0.3",
     "winston": "^3.3.3",
-    "ytdl-core": "^4.0.0"
+    "ytdl-core": "^4.4.0"
   },
   "devDependencies": {
-    "@hazmi35/eslint-config": "^2.1.3",
-    "@types/node": "^14.14.5",
-    "@typescript-eslint/eslint-plugin": "^4.6.0",
-    "@typescript-eslint/parser": "^4.6.0",
-    "eslint": "^7.12.1",
-    "ts-node": "^9.0.0",
-    "typescript": "^4.0.5"
+    "@hazmi35/eslint-config": "^3.4.0",
+    "@types/node": "^14.14.20",
+    "@typescript-eslint/eslint-plugin": "^4.12.0",
+    "@typescript-eslint/parser": "^4.12.0",
+    "@zhycorp/eslint-config": "^2.4.2",
+    "eslint": "^7.17.0",
+    "ts-node": "^9.1.1",
+    "typescript": "^4.1.3"
   },
   "optionalDependencies": {
     "@discordjs/opus": "^0.3.3",
-    "bufferutil": "^4.0.1",
+    "bufferutil": "^4.0.3",
     "erlpack": "github:discord/erlpack",
     "libsodium-wrappers": "^0.7.8",
-    "utf-8-validate": "^5.0.2",
+    "utf-8-validate": "^5.0.4",
     "zlib-sync": "^0.1.7"
   },
   "engines": {
-    "node": ">=12.x"
+    "node": ">=12.9.0"
   }
 }

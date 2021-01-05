@@ -1,18 +1,18 @@
-FROM node:14-alpine as build-stage
+FROM node:14.15.3-alpine as build-stage
 
 LABEL name "Disc 11 (build stage)"
-LABEL maintainer "Zhycorp <support@zhycorp.xyz>"
+LABEL maintainer "Zhycorp <support@zhycorp.com>"
 
 LABEL original-maintainer "Hazmi35 <contact@hzmi.xyz>"
 
 WORKDIR /tmp/build
 
+# Install node-gyp dependencies
+RUN apk add --no-cache build-base git python3
+
 # Copy package.json and yarn.lock
 COPY package.json .
 COPY yarn.lock .
-
-# Install node-gyp dependencies
-RUN apk add --no-cache --virtual .build-deps build-base curl git python3
 
 # Install dependencies
 RUN yarn install
@@ -27,14 +27,17 @@ RUN yarn run build
 RUN yarn install --production
 
 # Get ready for production
-FROM node:14-alpine
+FROM node:14.15.3-alpine
+
+LABEL name "Disc 11"
+LABEL maintainer "Zhycorp <support@zhycorp.com>"
+
+LABEL original-maintainer "Hazmi35 <contact@hzmi.xyz>"
 
 WORKDIR /app
 
-LABEL name "Disc 11"
-LABEL maintainer "Zhycorp <support@zhycorp.xyz>"
-
-LABEL original-maintainer "Hazmi35 <contact@hzmi.xyz>"
+# Install dependencies
+RUN apk add --no-cache tzdata
 
 # Copy needed files
 COPY --from=build-stage /tmp/build/package.json .

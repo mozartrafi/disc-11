@@ -1,25 +1,23 @@
-import BaseCommand from "../structures/BaseCommand";
-import { MessageEmbed } from "discord.js";
-import type { IMessage } from "../../typings";
-import type Disc_11 from "../structures/Disc_11";
+import { BaseCommand } from "../structures/BaseCommand";
+import { IMessage } from "../../typings";
+import { DefineCommand } from "../utils/decorators/DefineCommand";
+import { isMusicPlaying } from "../utils/decorators/MusicHelper";
+import { createEmbed } from "../utils/createEmbed";
 
-export default class NowPlayingCommand extends BaseCommand {
-    public constructor(client: Disc_11, public readonly path: string) {
-        super(client, path, {
-            aliases: ["np", "now-playing"]
-        }, {
-            name: "nowplaying",
-            description: "Send an information about the track",
-            usage: "{prefix}nowplaying"
-        });
-    }
-
+@DefineCommand({
+    aliases: ["np", "now-playing"],
+    name: "nowplaying",
+    description: "Send an information about the track",
+    usage: "{prefix}nowplaying"
+})
+export class NowPlayingCommand extends BaseCommand {
+    @isMusicPlaying()
     public execute(message: IMessage): any {
-        if (!message.guild?.queue) return message.channel.send(new MessageEmbed().setDescription("There is nothing playing.").setColor("YELLOW"));
+        const song = message.guild?.queue?.songs.first();
         return message.channel.send(
-            new MessageEmbed().setDescription(`${message.guild.queue.playing ? "▶  **|**  Now playing:" : "⏸  **|**  Now playing (paused):"} ` +
-                `**[${message.guild.queue.songs.first()?.title as string}](${message.guild.queue.songs.first()?.url as string})**`)
-                .setColor(this.client.config.embedColor)
+            createEmbed("info", `${message.guild?.queue?.playing ? "▶  **|**  Now playing:" : "⏸  **|**  Now playing (paused):"} ` +
+                `**[${song?.title as string}](${song?.url as string})**`)
+                .setThumbnail(song?.thumbnail as string)
         );
     }
 }

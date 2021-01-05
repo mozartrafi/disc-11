@@ -1,14 +1,19 @@
 import "dotenv/config";
-import Client from "./structures/Disc_11";
+import { fetchAllUsers } from "./config";
+import { Disc_11 } from "./structures/Disc_11";
+import { BitFieldResolvable, IntentsString } from "discord.js";
 
-const client = new Client({
+const intents: BitFieldResolvable<IntentsString> = ["GUILDS", "GUILD_VOICE_STATES", "GUILD_MESSAGES", "GUILD_MESSAGE_REACTIONS"];
+
+const client = new Disc_11({
     disableMentions: "everyone",
+    fetchAllMembers: fetchAllUsers,
     messageCacheLifetime: 60,
     messageCacheMaxSize: Infinity,
     messageEditHistoryMaxSize: Infinity,
     messageSweepInterval: 180,
     ws: {
-        intents: ["GUILDS", "GUILD_PRESENCES", "GUILD_MEMBERS", "GUILD_VOICE_STATES", "GUILD_MESSAGES"]
+        intents: fetchAllUsers ? intents.concat(["GUILD_MEMBERS"]) : intents
     }
 });
 

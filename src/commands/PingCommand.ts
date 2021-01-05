@@ -1,26 +1,22 @@
-import BaseCommand from "../structures/BaseCommand";
+import { BaseCommand } from "../structures/BaseCommand";
 import { MessageEmbed } from "discord.js";
-import type { IMessage } from "../../typings";
-import type Disc_11 from "../structures/Disc_11";
+import { IMessage } from "../../typings";
+import { DefineCommand } from "../utils/decorators/DefineCommand";
 
-export default class PingCommand extends BaseCommand {
-    public constructor(client: Disc_11, public readonly path: string) {
-        super(client, path, {
-            aliases: ["pingpong", "pong", "pang", "pung", "peng", "pong"]
-        }, {
-            name: "ping",
-            description: "Shows the current ping of the bot",
-            usage: "{prefix}ping"
-        });
-    }
-
+@DefineCommand({
+    aliases: ["pong", "pang", "pung", "peng", "pingpong"],
+    name: "ping",
+    description: "Shows the current ping of the bot",
+    usage: "{prefix}ping"
+})
+export class PingCommand extends BaseCommand {
     public execute(message: IMessage): IMessage {
         const before = Date.now();
         message.channel.send("*🏓 Pinging...*").then((msg: IMessage | any) => {
             const latency = Date.now() - before;
             const wsLatency = this.client.ws.ping.toFixed(0);
             const embed = new MessageEmbed()
-                .setAuthor("**🏓 PONG!**", message.client.user?.displayAvatarURL())
+                .setAuthor("🏓 PONG!", message.client.user?.displayAvatarURL())
                 .setColor(this.searchHex(wsLatency))
                 .addFields({
                     name: "API Latency",
@@ -31,9 +27,7 @@ export default class PingCommand extends BaseCommand {
                     value: `**\`${wsLatency}\`** ms`,
                     inline: true
                 })
-                .setFooter(`Requested by: ${message.author.tag}`, message.author.displayAvatarURL())
-                .setTimestamp();
-
+                .setFooter(`Requested by: ${message.author.tag}`, message.author.displayAvatarURL());
             msg.edit(embed);
             msg.edit("");
         }).catch(e => this.client.logger.error("PING_CMD_ERR:", e));

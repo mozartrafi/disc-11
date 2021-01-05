@@ -1,24 +1,23 @@
-import BaseCommand from "../structures/BaseCommand";
-import { MessageEmbed, version } from "discord.js";
+import { BaseCommand } from "../structures/BaseCommand";
+import { version } from "discord.js";
 import { uptime as osUptime } from "os";
-import path from "path";
+import path, { resolve } from "path";
 import { formatMS } from "../utils/formatMS";
-import type Disc_11 from "../structures/Disc_11";
-import type { IMessage } from "../../typings";
+import { IMessage } from "../../typings";
+import { DefineCommand } from "../utils/decorators/DefineCommand";
+import { createEmbed } from "../utils/createEmbed";
 
-export default class AboutCommand extends BaseCommand {
-    public constructor(public client: Disc_11, public readonly path: string) {
-        super(client, path, { aliases: ["botinfo", "info", "stats"] }, {
-            name: "about",
-            description: "Send the bot's information",
-            usage: "{prefix}about"
-        });
-    }
-
+@DefineCommand({
+    aliases: ["botinfo", "info", "stats"],
+    name: "about",
+    description: "Send the bot information",
+    usage: "{prefix}about"
+})
+export class AboutCommand extends BaseCommand {
     public async execute(message: IMessage): Promise<void> {
-        message.channel.send(new MessageEmbed()
-            .setAuthor(`${this.client.user?.username as string} - A simple open-sourced music bot`)
-            .setDescription(`
+        const opusEncoderName = this.getOpusEncoder().name;
+        message.channel.send(
+            createEmbed("info", `
 \`\`\`asciidoc
 Users count         :: ${await this.client.getUsersCount()}
 Channels count      :: ${await this.client.getChannelsCount()}
@@ -36,17 +35,20 @@ Bot uptime          :: ${formatMS(this.client.uptime!)}
 
 Node.JS version     :: ${process.version}
 Discord.JS version  :: v${version}
+FFmpeg version      :: v${(await import(this.getPackageJSON("ffmpeg-static")))["ffmpeg-static"]["binary-release-name"]}
+YTDL-Core version   :: v${(await import(this.getPackageJSON("ytdl-core"))).version}
+Opus Encoder        :: ${opusEncoderName} v${(await import(this.getPackageJSON(opusEncoderName))).version}
 Bot version         :: v${(await import(path.join(process.cwd(), "package.json"))).version}
 
 Source code         :: https://github.com/zhycorp/disc-11
-Get a support       :: https://zhycorp.xyz/discord
+Get a support       :: https://zhycorp.com/discord
 \`\`\`
-    `)
-            .setColor(this.client.config.embedColor)
-            .setTimestamp()).catch(e => this.client.logger.error("ABOUT_CMD_ERR:", e));
+        `)
+                .setAuthor(`${this.client.user?.username as string} - A simple open-sourced Discord music bot`)
+        ).catch(e => this.client.logger.error("ABOUT_CMD_ERR:", e));
     }
 
-    private bytesToSize(bytes: number): string { // Function From Rendang's util (https://github.com/Hazmi35/rendang)
+    private bytesToSize(bytes: number): string { // Function rrom Rendang's util (https://github.com/Hazmi35/rendang)
         if (isNaN(bytes) && bytes !== 0) throw new Error(`[bytesToSize] (bytes) Error: bytes is not a Number/Integer, received: ${typeof bytes}`);
         const sizes: string[] = ["B", "KiB", "MiB", "GiB", "TiB", "PiB"];
         if (bytes < 2 && bytes > 0) return `${bytes} Byte`;
@@ -55,5 +57,27 @@ Get a support       :: https://zhycorp.xyz/discord
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (sizes[i] === undefined) return `${bytes} ${sizes[sizes.length - 1]}`;
         return `${Number(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
+    }
+
+    private getPackageJSON(pkgName: string): string {
+        if (process.platform === "win32") pkgName = pkgName.replace("/", "\\");
+        const resolvedPath = resolve(require.resolve(pkgName));
+        return resolve(resolvedPath.split(pkgName)[0], pkgName, "package.json");
+    }
+
+    private getOpusEncoder(): any {
+        const list = ["@discordjs/opus", "opusscript"];
+        const errorLog = [];
+        for (const name of list) {
+            try {
+                // eslint-disable-next-line @typescript-eslint/no-var-requires
+                const data = require(name);
+                data.name = name;
+                return data;
+            } catch (e) {
+                errorLog.push(e);
+            }
+        }
+        throw new Error(errorLog.join("\n"));
     }
 }

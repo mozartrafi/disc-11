@@ -1,34 +1,24 @@
-import BaseCommand from "../structures/BaseCommand";
-import { MessageEmbed } from "discord.js";
-import type Disc_11 from "../structures/Disc_11";
-import type { IMessage } from "../../typings";
+import { BaseCommand } from "../structures/BaseCommand";
+import { IMessage } from "../../typings";
+import { DefineCommand } from "../utils/decorators/DefineCommand";
+import { isUserInTheVoiceChannel, isMusicPlaying, isSameVoiceChannel } from "../utils/decorators/MusicHelper";
+import { createEmbed } from "../utils/createEmbed";
 
-export default class StopCommand extends BaseCommand {
-    public constructor(public client: Disc_11, public readonly path: string) {
-        super(client, path, {
-            aliases: ["leave", "disconnect", "dc"]
-        }, {
-            name: "stop",
-            description: "Stop track and delete the queue",
-            usage: "{prefix}stop"
-        });
-    }
-
+@DefineCommand({
+    aliases: ["leave", "disconnect", "dc"],
+    name: "stop",
+    description: "Stop track and deletes the queue",
+    usage: "{prefix}stop"
+})
+export class StopCommand extends BaseCommand {
+    @isUserInTheVoiceChannel()
+    @isMusicPlaying()
+    @isSameVoiceChannel()
     public execute(message: IMessage): any {
-        if (!message.member?.voice.channel) return message.channel.send(new MessageEmbed().setDescription("You're not in a voice channel").setColor("YELLOW"));
-        if (!message.guild?.queue) return message.channel.send(new MessageEmbed().setDescription("There is nothing playing.").setColor("YELLOW"));
-        if (message.member.voice.channel.id !== message.guild.queue.voiceChannel?.id) {
-            return message.channel.send(
-                new MessageEmbed().setDescription("You need to be in the same voice channel as mine").setColor("RED")
-            );
-        }
+        message.guild?.queue?.voiceChannel?.leave();
+        message.guild!.queue = null;
 
-        message.guild.queue.playing = true;
-        message.guild.queue.connection?.dispatcher.resume();
-        message.guild.queue.songs.clear();
-        message.guild.queue.connection?.dispatcher.end();
-
-        message.channel.send(new MessageEmbed().setDescription("⏹  **|**  Stopping the queue...").setColor(this.client.config.embedColor))
+        message.channel.send(createEmbed("info", "⏹  **|**  The queue has been stopped."))
             .catch(e => this.client.logger.error("STOP_CMD_ERR:", e));
     }
 }
