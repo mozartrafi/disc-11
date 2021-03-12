@@ -1,4 +1,4 @@
-import { parse } from "iso8601-duration";
+import { parse, toSeconds } from "iso8601-duration";
 import { YoutubeAPI } from "..";
 import { IVideo } from "../types";
 
@@ -10,13 +10,14 @@ export class Video implements IVideo {
     public channel: IVideo["channel"];
     public thumbnails: IVideo["thumbnails"];
     public duration: IVideo["duration"];
+    public durationMS: IVideo["durationMS"];
     public status: IVideo["status"];
     public publishedAt: IVideo["publishedAt"];
     public constructor(public yt: YoutubeAPI, public raw: IVideo["raw"], type: "video" | "playlistItem" | "searchResults" = "video") {
         this.id = type === "video"
             ? raw.id
             : type === "playlistItem" ? (raw as any).snippet.resourceId.videoId : (raw as any).id.videoId;
-        this.url = `https://youtube.com/watch?v=${raw.id}`;
+        this.url = `https://youtube.com/watch?v=${this.id}`;
         this.title = raw.snippet.title;
         this.description = raw.snippet.description;
         this.channel = {
@@ -26,11 +27,13 @@ export class Video implements IVideo {
         };
         this.thumbnails = raw.snippet.thumbnails;
         this.duration = raw.contentDetails?.duration ? parse(raw.contentDetails.duration) : null;
-        this.status = raw.status;
+        this.durationMS = this.duration ? toSeconds(this.duration) * 1000 : null;
+        this.status = type === "searchResults" ? { privacyStatus: "public" } : raw.status;
         this.publishedAt = new Date(raw.snippet.publishedAt);
     }
 
-    public get thumbnailURL(): string {
+    public get thumbnailURL(): string | null {
+        if (Object.keys(this.thumbnails).length === 0) return null;
         return (this.thumbnails.maxres ?? this.thumbnails.high ?? this.thumbnails.medium ?? this.thumbnails.standard ?? this.thumbnails.default).url;
     }
 }

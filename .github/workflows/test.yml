@@ -3,8 +3,7 @@ name: Lint code & compile test
 on:
   push:
     branches:
-      - stable
-      - dev
+      - main
   pull_request:
     branches:
       - "**"
@@ -14,41 +13,41 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [">=12.9.0", 14.x]
+        node-version: [14.x]
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2.3.4
   
     - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v2.1.4
+      uses: actions/setup-node@v2.1.5
       with:
         node-version: ${{ matrix.node-version }}
         check-latest: true
         
     - name: Install dependencies
-      run: yarn install --frozen-lockfile
+      run: npm ci
 
     - name: Lint code
-      run: yarn run lint
+      run: npm run lint
 
   compile:
     needs: lint
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [">=12.9.0", 14.x]
+        node-version: [14.x]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2.3.4
 
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v2.1.4
+        uses: actions/setup-node@v2.1.5
         with:
           node-version: ${{ matrix.node-version }}
           check-latest: true
         
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: npm ci
       
       - name: Test compile
-        run: yarn run compile && rm -rf dist
+        run: npm run compile && rm -rf dist

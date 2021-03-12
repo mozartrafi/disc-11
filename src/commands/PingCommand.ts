@@ -6,24 +6,24 @@ import { DefineCommand } from "../utils/decorators/DefineCommand";
 @DefineCommand({
     aliases: ["pong", "pang", "pung", "peng", "pingpong"],
     name: "ping",
-    description: "Shows the current ping of the bot",
+    description: "Show the current ping of the bot",
     usage: "{prefix}ping"
 })
 export class PingCommand extends BaseCommand {
     public execute(message: IMessage): IMessage {
         const before = Date.now();
-        message.channel.send("*🏓 Pinging...*").then((msg: IMessage | any) => {
+        message.channel.send("🏓").then((msg: IMessage | any) => {
             const latency = Date.now() - before;
             const wsLatency = this.client.ws.ping.toFixed(0);
             const embed = new MessageEmbed()
-                .setAuthor("🏓 PONG!", message.client.user?.displayAvatarURL())
+                .setAuthor("🏓 PONG", message.client.user?.displayAvatarURL())
                 .setColor(this.searchHex(wsLatency))
                 .addFields({
-                    name: "API Latency",
+                    name: "📶 | API",
                     value: `**\`${latency}\`** ms`,
                     inline: true
                 }, {
-                    name: "WebSocket Latency",
+                    name: "🌐 | WebSocket",
                     value: `**\`${wsLatency}\`** ms`,
                     inline: true
                 })
@@ -36,14 +36,14 @@ export class PingCommand extends BaseCommand {
 
     private searchHex(ms: string | number): string | number {
         const listColorHex = [
-            [0, 20, "#0DFF00"],
-            [21, 50, "#0BC700"],
-            [51, 100, "#E5ED02"],
-            [101, 150, "#FF8C00"],
-            [150, 200, "#FF6A00"]
+            [0, 20, "GREEN"],
+            [21, 50, "GREEN"],
+            [51, 100, "YELLOW"],
+            [101, 150, "YELLOW"],
+            [150, 200, "YELLOW"]
         ];
 
-        const defaultColor = "#FF0D00";
+        const defaultColor = "RED";
 
         const min = listColorHex.map(e => e[0]);
         const max = listColorHex.map(e => e[1]);

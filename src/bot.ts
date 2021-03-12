@@ -1,11 +1,11 @@
 import "dotenv/config";
 import { fetchAllUsers } from "./config";
-import { Disc_11 } from "./structures/Disc_11";
+import { Disc } from "./structures/Disc";
 import { BitFieldResolvable, IntentsString } from "discord.js";
 
 const intents: BitFieldResolvable<IntentsString> = ["GUILDS", "GUILD_VOICE_STATES", "GUILD_MESSAGES", "GUILD_MESSAGE_REACTIONS"];
 
-const client = new Disc_11({
+const client = new Disc({
     disableMentions: "everyone",
     fetchAllMembers: fetchAllUsers,
     messageCacheLifetime: 60,
@@ -23,9 +23,9 @@ process.on("unhandledRejection", e => {
 
 process.on("uncaughtException", e => {
     client.logger.error("UNCAUGHT_EXCEPTION: ", e);
-    client.logger.warn("Uncaught Exception detected. Restarting...");
+    client.logger.warn("Uncaught Exception detected, restarting...");
     process.exit(1);
 });
 
-client.build(process.env.DISCORD_TOKEN!)
+client.build(process.env.SECRET_DISCORD_TOKEN!)
     .catch(e => client.logger.error("CLIENT_BUILD_ERR: ", e));

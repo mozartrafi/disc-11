@@ -1,5 +1,5 @@
 import { YoutubeAPI } from "..";
-import { IPlaylist, IVideo } from "../types";
+import { IPlaylist } from "../types";
 import { Video } from "./Video";
 
 export class Playlist implements IPlaylist {
@@ -14,7 +14,7 @@ export class Playlist implements IPlaylist {
     public createdAt: IPlaylist["createdAt"];
     public constructor(public yt: YoutubeAPI, public raw: IPlaylist["raw"]) {
         this.id = raw.id;
-        this.url = `https://youtube.com/playlist?vlist=${raw.id}`;
+        this.url = `https://youtube.com/playlist?vlist=${this.id}`;
         this.title = raw.snippet.title;
         this.description = raw.snippet.description;
         this.channel = {
@@ -28,8 +28,13 @@ export class Playlist implements IPlaylist {
         this.createdAt = new Date(raw.snippet.publishedAt);
     }
 
-    public async getVideos(): Promise<IVideo[]> {
+    public async getVideos(): Promise<Video[]> {
         const videos = await this.yt.makePaginatedRequest("playlistItems", { maxResults: 50, playlistId: this.id }, this.itemCount);
         return videos.map((i: any) => new Video(this.yt, i, "playlistItem"));
+    }
+
+    public get thumbnailURL(): string | null {
+        if (Object.keys(this.thumbnails).length === 0) return null;
+        return (this.thumbnails.maxres ?? this.thumbnails.high ?? this.thumbnails.medium ?? this.thumbnails.standard ?? this.thumbnails.default).url;
     }
 }

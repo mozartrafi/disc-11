@@ -7,9 +7,9 @@ updates:
     time: "06:00"
     timezone: Asia/Jakarta
   open-pull-requests-limit: 99
-  target-branch: dev
+  target-branch: main
   reviewers:
-  - mozartrafi
+  - mzrtamp
   labels:
   - dependencies
   commit-message:
@@ -22,9 +22,9 @@ updates:
     time: "06:00"
     timezone: Asia/Jakarta
   open-pull-requests-limit: 99
-  target-branch: dev
+  target-branch: main
   reviewers:
-  - mozartrafi
+  - mzrtamp
   labels:
   - gh-actions
   - dependencies
@@ -38,12 +38,12 @@ updates:
     time: "06:00"
     timezone: Asia/Jakarta
   open-pull-requests-limit: 99
-  target-branch: dev
+  target-branch: main
   reviewers:
-  - mozartrafi
+  - mzrtamp
   labels:
   - docker
   - dependencies
   commit-message:
-    prefix: chore
+    prefix: docker
     include: scope

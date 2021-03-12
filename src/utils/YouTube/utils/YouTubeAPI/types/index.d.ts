@@ -50,9 +50,9 @@ export interface IVideo {
             duration?: string;
         };
         status: {
-            uploadStatus: uploadStatus;
-            failureReason: failureReason;
-            rejectionReason: rejectionReason;
+            uploadStatus?: uploadStatus;
+            failureReason?: failureReason;
+            rejectionReason?: rejectionReason;
             privacyStatus: privacyStatus;
         };
     };
@@ -67,10 +67,11 @@ export interface IVideo {
     };
     thumbnails: IThumbnails;
     duration: Duration | null;
+    durationMS: number | null;
     status: {
-        uploadStatus: uploadStatus;
-        failureReason: failureReason;
-        rejectionReason: rejectionReason;
+        uploadStatus?: uploadStatus;
+        failureReason?: failureReason;
+        rejectionReason?: rejectionReason;
         privacyStatus: privacyStatus;
     };
     publishedAt: Date;
