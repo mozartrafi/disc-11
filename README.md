@@ -5,7 +5,6 @@
 <a href="https://discord.com/oauth2/authorize?client_id=690736793682968576&permissions=53857345&scope=bot"><img src="https://img.shields.io/static/v1?label=Invite%20Me&message=Disc%2011%230606&plastic&color=7289DA&logo=discord"></a>
 <img src="https://badgen.net/badge/icon/typescript?icon=typescript&label">
 <a href="https://github.com/zhycorp/disc-11/actions?query=workflow%3A%22Lint+code+%26+compile+test%22"><img src="https://github.com/zhycorp/disc-11/workflows/Lint%20code%20&%20compile%20test/badge.svg" alt="CI Status" /></a>
-<img src="https://badgen.net/badge/jual/haram/red">
 
 ## Usage
 
@@ -22,17 +21,17 @@ $ npm prune --production
 6. Start it with `npm start`, and you're done!
 
 Notes: 
-1. You only need to configure .env file when you're using the [Docker image](https://github.com/zhycorp/disc-11#Docker)
-2. If you're using "Deploy to Heroku" button, you don't need to do this.
+1. You only need to configure `.env` file when you're using the [Docker image](https://github.com/zhycorp/disc-11#Docker)
+2. If you're using **Deploy to Heroku** button, you don't need to do this.
 
 ## Installation
 
-Without optional packages
+Without optional packages:
 ```sh
 $ npm install --no-optional
 ```
 
-With optional packages (recommended)
+With optional packages (recommended):
 ```sh
 $ npm install
 ```
@@ -67,7 +66,7 @@ Sure, we have provided them on the [Docker Hub](https://hub.docker.com/r/hazmi35
 ### Volumes
 [Docker Volumes](https://docs.docker.com/storage/volumes/) are needed to store cache and logs persistently.
 
-### Example:
+### Example
 ```sh
 $ docker run --env-file .env --volume cache:/app/cache --volume logs:/app/logs --restart unless-stopped hazmi35/jukebox
 ```
@@ -82,9 +81,10 @@ $ docker-compose up
 - Basic Commands (Help, Ping, Invite & Eval [for advanced bot owners])
 - Basic Music Commands (Play, Skip, Stop, Pause & Resume, Now Playing, Queue, Repeat, Volume)
 - A production-ready music bot, suitable for you that don't like to hassling with the code
+- Lightweight (only around 120MB with dev dependencies pruned)
+- Spotify player support (will be converted as youtube video)
+- Docker-friendly (if you're advanced user)
 - Caching (cache youtube downloads)
 - Configurable (easy to use)
-- Docker-friendly (if you're advanced user)
-- Lightweight (only around 120MB with dev dependencies pruned)
 
-Based on [discord-music-bot](https://github.com/iCrawl/discord-music-bot) and reworked from [jukebox](https://github.com/Hazmi35/jukebox)
+Based on [jukebox](https://github.com/Hazmi35/jukebox)
